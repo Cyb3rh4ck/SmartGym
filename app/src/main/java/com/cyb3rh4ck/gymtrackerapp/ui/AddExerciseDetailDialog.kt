@@ -53,7 +53,6 @@ fun AddExerciseDetailDialog(
                     )
                     OutlinedTextField(
                         value = inputReps,
-                        // CORRECCIÓN: Se cambió 'reps' por 'inputReps'
                         onValueChange = { inputReps = it },
                         label = { Text("Reps") },
                         modifier = Modifier.weight(1f)
@@ -69,7 +68,6 @@ fun AddExerciseDetailDialog(
 
                 OutlinedTextField(
                     value = inputNote,
-                    // CORRECCIÓN: Se cambió 'note' por 'inputNote'
                     onValueChange = { inputNote = it },
                     label = { Text("Nota (Opcional)") }
                 )

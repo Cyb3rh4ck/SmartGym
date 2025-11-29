@@ -139,7 +139,7 @@ fun SmartGymScreen(viewModel: MainViewModel) {
             },
             onCancel = { viewModel.cancelActiveWorkout() }
         )
-    }else if (showCreateRoutineDialog) {
+    } else if (showCreateRoutineDialog) {
         // NUEVA PANTALLA COMPLETA
         CreateRoutineScreen(
             viewModel = viewModel,

@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.error
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
@@ -153,22 +152,6 @@ fun CreateRoutineScreen(
                     }
                 }
             }
-
-//            // 3. Botón Guardar
-//            Button(
-//                onClick = {
-//                    if (routineName.isNotBlank() && draftExercises.isNotEmpty()) {
-//                        viewModel.saveNewRoutine(routineName)
-//                        onNavigateBack()
-//                    }
-//                },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(56.dp),
-//                enabled = routineName.isNotBlank() && draftExercises.isNotEmpty()
-//            ) {
-//                Text("GUARDAR RUTINA")
-//            }
         }
     }
 
