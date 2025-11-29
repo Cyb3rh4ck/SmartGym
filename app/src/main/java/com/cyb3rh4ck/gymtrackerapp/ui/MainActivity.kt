@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.cyb3rh4ck.gymtrackerapp.ui.theme.GymTrackerAppTheme
-import androidx.compose.material3.Typography
 
 
 class MainActivity : ComponentActivity() {
