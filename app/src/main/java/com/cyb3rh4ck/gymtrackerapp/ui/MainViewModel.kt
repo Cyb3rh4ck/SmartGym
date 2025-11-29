@@ -94,53 +94,100 @@ class MainViewModel(context: Context) : ViewModel() {
         }
     }
 
+    // INICIAR: Crea ejercicios con 1 serie vacía por defecto
     fun startRoutine(routine: Routine) {
         val exercises = routine.exercises.split(",")
             .filter { it.isNotBlank() }
             .mapIndexed { index, name ->
-                ActiveExercise(id = index, name = name.trim())
+                ActiveExercise(
+                    id = index,
+                    name = name.trim(),
+                    sets = listOf(ActiveSet()) // Empieza con la Serie 1 vacía
+                )
             }
         _activeWorkout.value = exercises
     }
 
-    // Actualizar un campo (peso o reps) mientras el usuario escribe
-    fun updateActiveExercise(id: Int, weight: String?, reps: String?, isDone: Boolean?) {
-        _activeWorkout.value = _activeWorkout.value.map { item ->
-            if (item.id == id) {
-                item.copy(
-                    weight = weight ?: item.weight,
-                    reps = reps ?: item.reps,
-                    isCompleted = isDone ?: item.isCompleted
-                )
+    // AGREGAR SERIE (Con lógica de duplicar datos anteriores)
+    fun addSetToExercise(exerciseId: Int) {
+        _activeWorkout.value = _activeWorkout.value.map { exercise ->
+            if (exercise.id == exerciseId) {
+                // Tomamos los datos de la última serie para copiarlos
+                val lastSet = exercise.sets.lastOrNull()
+                val newWeight = lastSet?.weight ?: ""
+                val newReps = lastSet?.reps ?: ""
+
+                // Creamos nueva serie con datos copiados pero check en false
+                val newSet = ActiveSet(weight = newWeight, reps = newReps, isCompleted = false)
+
+                exercise.copy(sets = exercise.sets + newSet)
             } else {
-                item
+                exercise
             }
         }
     }
-    // Guardar TODO en la base de datos
+
+    // BORRAR SERIE (Opcional, pero útil)
+    fun removeSetFromExercise(exerciseId: Int, setId: Long) {
+        _activeWorkout.value = _activeWorkout.value.map { exercise ->
+            if (exercise.id == exerciseId) {
+                exercise.copy(sets = exercise.sets.filter { it.id != setId })
+            } else {
+                exercise
+            }
+        }
+    }
+
+    // ACTUALIZAR UNA SERIE ESPECÍFICA
+    fun updateSet(exerciseId: Int, setId: Long, weight: String?, reps: String?, isDone: Boolean?) {
+        _activeWorkout.value = _activeWorkout.value.map { exercise ->
+            if (exercise.id == exerciseId) {
+                val updatedSets = exercise.sets.map { set ->
+                    if (set.id == setId) {
+                        set.copy(
+                            weight = weight ?: set.weight,
+                            reps = reps ?: set.reps,
+                            isCompleted = isDone ?: set.isCompleted
+                        )
+                    } else {
+                        set
+                    }
+                }
+                exercise.copy(sets = updatedSets)
+            } else {
+                exercise
+            }
+        }
+    }
+
+
+
+    // GUARDAR TODO (Aplanamos la lista para guardar cada serie individualmente)
     fun finishActiveWorkout() {
         viewModelScope.launch {
             val timestamp = System.currentTimeMillis()
-            _activeWorkout.value.forEach { item ->
-                // Solo guardamos si rellenó datos válidos
-                val w = item.weight.toFloatOrNull()
-                val r = item.reps.toIntOrNull()
 
-                if (w != null && r != null && w > 0 && r > 0) {
-                    val log = WorkoutLog(
-                        date = timestamp,
-                        exerciseName = item.name,
-                        muscleGroup = "Routine", // Podríamos mejorarlo luego, por ahora genérico
-                        weightUsed = w,
-                        reps = r,
-                        rpe = 8 // Valor por defecto o podríamos pedirlo
-                    )
-                    dao.logWorkout(log)
+            _activeWorkout.value.forEach { exercise ->
+                exercise.sets.forEach { set ->
+                    // Solo guardamos si tiene datos válidos y está marcada como completada (opcional)
+                    val w = set.weight.toFloatOrNull()
+                    val r = set.reps.toIntOrNull()
+
+                    if (w != null && r != null && w > 0 && r > 0) {
+                        val log = WorkoutLog(
+                            date = timestamp,
+                            exerciseName = exercise.name,
+                            muscleGroup = "Routine",
+                            weightUsed = w,
+                            reps = r,
+                            rpe = 8 // Podríamos añadir un slider de RPE por serie si quisieras
+                        )
+                        dao.logWorkout(log)
+                    }
                 }
             }
-            // Limpiamos el estado
             _activeWorkout.value = emptyList()
-            loadData() // Recargamos historial
+            loadData()
         }
     }
 
@@ -165,12 +212,17 @@ class MainViewModelFactory(private val context: Context) : ViewModelProvider.Fac
     }
 }
 
-// Modelo temporal para la pantalla de "Modo Entreno"
-data class ActiveExercise(
-    val id: Int, // ID único temporal para la lista
-    val name: String,
+// 1. NUEVAS CLASES DE DATOS (Jerarquía: Ejercicio -> Lista de Series)
+data class ActiveSet(
+    val id: Long = System.nanoTime(), // ID único para identificar la serie en la UI
     val weight: String = "",
     val reps: String = "",
     val isCompleted: Boolean = false
+)
+
+data class ActiveExercise(
+    val id: Int, // ID del ejercicio
+    val name: String,
+    val sets: List<ActiveSet> // AHORA CONTIENE UNA LISTA DE SERIES
 )
 
