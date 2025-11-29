@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.BottomAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +68,26 @@ fun CreateRoutineScreen(
                 icon = { Icon(Icons.Default.Add, "") },
                 text = { Text("Añadir Ejercicio") }
             )
+        }, bottomBar = {
+            BottomAppBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        if (routineName.isNotBlank() && draftExercises.isNotEmpty()) {
+                            viewModel.saveNewRoutine(routineName)
+                            onNavigateBack()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = routineName.isNotBlank() && draftExercises.isNotEmpty()
+                ) {
+                    Text("GUARDAR RUTINA")
+                }
+            }
         }
     ) { padding ->
         Column(
@@ -133,19 +154,21 @@ fun CreateRoutineScreen(
                 }
             }
 
-            // 3. Botón Guardar
-            Button(
-                onClick = {
-                    if (routineName.isNotBlank() && draftExercises.isNotEmpty()) {
-                        viewModel.saveNewRoutine(routineName)
-                        onNavigateBack()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = routineName.isNotBlank() && draftExercises.isNotEmpty()
-            ) {
-                Text("GUARDAR RUTINA")
-            }
+//            // 3. Botón Guardar
+//            Button(
+//                onClick = {
+//                    if (routineName.isNotBlank() && draftExercises.isNotEmpty()) {
+//                        viewModel.saveNewRoutine(routineName)
+//                        onNavigateBack()
+//                    }
+//                },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(56.dp),
+//                enabled = routineName.isNotBlank() && draftExercises.isNotEmpty()
+//            ) {
+//                Text("GUARDAR RUTINA")
+//            }
         }
     }
 
