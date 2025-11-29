@@ -130,7 +130,7 @@ class MainViewModel(context: Context) : ViewModel() {
     // BORRAR SERIE (Opcional, pero útil)
     fun removeSetFromExercise(exerciseId: Int, setId: Long) {
         _activeWorkout.value = _activeWorkout.value.map { exercise ->
-            if (exercise.id == exerciseId) {
+            if (exercise.sets.size > 1) {
                 exercise.copy(sets = exercise.sets.filter { it.id != setId })
             } else {
                 exercise
@@ -214,7 +214,7 @@ class MainViewModelFactory(private val context: Context) : ViewModelProvider.Fac
 
 // 1. NUEVAS CLASES DE DATOS (Jerarquía: Ejercicio -> Lista de Series)
 data class ActiveSet(
-    val id: Long = System.nanoTime(), // ID único para identificar la serie en la UI
+    val id: Long = java.util.UUID.randomUUID().mostSignificantBits, // ID único para identificar la serie en la UI
     val weight: String = "",
     val reps: String = "",
     val isCompleted: Boolean = false

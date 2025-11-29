@@ -10,9 +10,9 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.cyb3rh4ck.gymtrackerapp.ui.theme.Typography
 import androidx.compose.ui.platform.LocalContext
 
-// ... imports ...
 
 private val AdrenalineColorScheme = darkColorScheme(
     primary = AdrenalineRed,
@@ -38,14 +38,9 @@ private val AdrenalineColorScheme = darkColorScheme(
 
 @Composable
 fun GymTrackerAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // <--- IMPORTANTE: Pon esto en FALSE para que no use los colores de fondo de pantalla del usuario
     content: @Composable () -> Unit
 ) {
-    // Forzamos la paleta oscura Adrenaline para ese look "Brutal" siempre,
-    // o puedes dejar la lógica del sistema si prefieres.
-    // Aquí asumo que quieres que la app se vea dark siempre para mantener la estética.
+// Aplicación directa del esquema de colores personalizado
     val colorScheme = AdrenalineColorScheme
 
     MaterialTheme(

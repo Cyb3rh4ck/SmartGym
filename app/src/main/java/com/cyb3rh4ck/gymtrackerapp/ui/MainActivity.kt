@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // 1. Obtenemos el contexto de la aplicación
-                    val context = LocalContext.current.applicationContext as Application
+                    val context = LocalContext.current
 
                     // 2. Creamos el ViewModel usando un Factory
                     // Esto es necesario porque MainViewModel necesita recibir la Base de Datos/Dao
@@ -88,25 +88,6 @@ class MainActivity : ComponentActivity() {
     }
 
 }
-
-// --- TEMA VISUAL ---
-@Composable
-fun GymTrackerAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(), // Esto ya no importará mucho con el cambio de abajo
-    dynamicColor: Boolean = false, // IMPORTANTE: false para ignorar colores de Android 12+
-    content: @Composable () -> Unit
-) {
-    // FORZAMOS SIEMPRE LA PALETA 'ADRENALINE'
-    // Ignoramos si el sistema está en light mode
-    val colorScheme = AdrenalineColorScheme
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
-}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -352,7 +333,12 @@ fun WorkoutForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Grupo Muscular:", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Text(
+            "Grupo Muscular:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant // Antes: Color.Gray
+        )
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             listOf("Chest", "Back", "Legs", "Arms").forEach { muscle ->
                 FilterChip(
@@ -481,11 +467,22 @@ fun WorkoutLogCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(log.exerciseName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    // Row del encabezado
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        Icon(
+                            Icons.Filled.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text(dateFormat.format(Date(log.date)), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(
+                            dateFormat.format(Date(log.date)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
+
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -680,12 +677,34 @@ fun ActiveWorkoutScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Cabecera de la tabla
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("Serie", modifier = Modifier.width(40.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                            Text("Kg", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                            Text("Reps", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                            Text("Hecho", modifier = Modifier.width(50.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        // Dentro de ActiveWorkoutScreen -> Card -> Column
+                        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                            Text(
+                                "Serie",
+                                modifier = Modifier.width(40.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
+                            Text(
+                                "Kg",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
+                            Text(
+                                "Reps",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
+                            Text(
+                                "Hecho",
+                                modifier = Modifier.width(50.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
                         }
+
 
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -714,7 +733,7 @@ fun ActiveWorkoutScreen(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        unfocusedBorderColor = Color.LightGray,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         focusedContainerColor = if (set.isCompleted) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) else Color.Transparent
                                     )
                                 )
@@ -751,7 +770,7 @@ fun ActiveWorkoutScreen(
                                         Icon(
                                             Icons.Filled.Close, // O Icons.Filled.Delete si lo tienes
                                             contentDescription = "Borrar serie",
-                                            tint = Color.Gray,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -798,59 +817,3 @@ fun ActiveWorkoutScreen(
         }
     }
 }
-
-
-// 1. DEFINICIÓN DE COLORES (ADRENALINE CORE)
-val AdrenalineRed = Color(0xFFFF3B30)
-val AdrenalineRedDark = Color(0xFFD32F2F)
-val VoidBlack = Color(0xFF121212)
-val CarbonGrey = Color(0xFF1E1E1E)
-val SteelGrey = Color(0xFF2C2C2C)
-val WhiteGhost = Color(0xFFFFFFFF)
-val SilverMist = Color(0xB3FFFFFF)
-val NeonGreen = Color(0xFF00E676)
-val AlertOrange = Color(0xFFFF9100)
-
-// 2. ESQUEMA DE COLOR (MAPPING)
-val AdrenalineColorScheme = darkColorScheme(
-    primary = AdrenalineRed,
-    onPrimary = Color.White,
-    primaryContainer = AdrenalineRedDark,
-    onPrimaryContainer = Color.White,
-
-    secondary = NeonGreen,
-    onSecondary = Color.Black,
-
-    background = VoidBlack,
-    onBackground = WhiteGhost,
-
-    surface = CarbonGrey,
-    onSurface = WhiteGhost,
-
-    surfaceVariant = SteelGrey,
-    onSurfaceVariant = SilverMist,
-
-    error = AlertOrange,
-    onError = Color.Black
-)
-
-// 3. TIPOGRAFÍA BÁSICA
-val Typography = Typography(
-    bodyLarge = androidx.compose.ui.text.TextStyle(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    ),
-    titleLarge = androidx.compose.ui.text.TextStyle(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    )
-)
-
-
-
