@@ -1,11 +1,13 @@
 package com.cyb3rh4ck.gymtrackerapp.ui
 
+import android.app.Application
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -42,42 +44,49 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.Close
-
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.cyb3rh4ck.gymtrackerapp.ui.theme.GymTrackerAppTheme
+import androidx.compose.material3.Typography
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymTheme {
+            GymTrackerAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // 1. Obtenemos el contexto de la aplicación
                     val context = LocalContext.current
+
+                    // 2. Creamos el ViewModel usando un Factory
+                    // Esto es necesario porque MainViewModel necesita recibir la Base de Datos/Dao
                     val viewModel: MainViewModel = viewModel(
-                        factory = MainViewModelFactory(context)
+                        factory = object : ViewModelProvider.Factory {
+                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                // AQUÍ ASUMO QUE TU MainViewModel RECIBE EL DAO O EL CONTEXTO
+                                // Si tu MainViewModel se inicializa diferente, ajusta esta línea.
+
+                                // Opción A: Si usas el patrón de instanciar la DB dentro del ViewModel (principiante)
+                                return MainViewModel(context) as T
+
+                                // Opción B: Si pasas el DAO (más correcto)
+                                // val db = com.cyb3rh4ck.gymtrackerapp.data.AppDatabase.getDatabase(context)
+                                // return MainViewModel(db.workoutDao()) as T
+                            }
+                        }
                     )
-                    SmartGymScreen(viewModel)
+
+                    // 3. Ahora sí pasamos la variable definida arriba
+                    SmartGymScreen(viewModel = viewModel)
                 }
             }
         }
     }
-}
 
-// --- TEMA VISUAL ---
-@Composable
-fun GymTheme(content: @Composable () -> Unit) {
-    val gymColors = lightColorScheme(
-        primary = Color(0xFF4F46E5),
-        onPrimary = Color.White,
-        secondary = Color(0xFF10B981),
-        tertiary = Color(0xFFF59E0B),
-        background = Color(0xFFF8FAFC),
-        surface = Color.White,
-        surfaceVariant = Color(0xFFEEF2FF)
-    )
-    MaterialTheme(colorScheme = gymColors, content = content)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,10 +123,17 @@ fun SmartGymScreen(viewModel: MainViewModel) {
 
     // 2. LÓGICA DE NAVEGACIÓN SIMPLE (Switch de Vistas)
     if (activeWorkout.isNotEmpty()) {
-        // --- MODO ENTRENO ---
         ActiveWorkoutScreen(
             exercises = activeWorkout,
-            onUpdate = { id, w, r, done -> viewModel.updateActiveExercise(id, w, r, done) },
+            onUpdateSet = { exId, setId, w, r, done ->
+                viewModel.updateSet(exId, setId, w, r, done)
+            },
+            onAddSet = { exId ->
+                viewModel.addSetToExercise(exId)
+            },
+            onRemoveSet = { exId, setId -> // (Opcional)
+                viewModel.removeSetFromExercise(exId, setId)
+            },
             onFinish = {
                 viewModel.finishActiveWorkout()
                 Toast.makeText(context, "¡Entreno Guardado! 💪", Toast.LENGTH_LONG).show()
@@ -317,7 +333,12 @@ fun WorkoutForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Grupo Muscular:", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Text(
+            "Grupo Muscular:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant // Antes: Color.Gray
+        )
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             listOf("Chest", "Back", "Legs", "Arms").forEach { muscle ->
                 FilterChip(
@@ -446,11 +467,22 @@ fun WorkoutLogCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(log.exerciseName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    // Row del encabezado
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        Icon(
+                            Icons.Filled.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text(dateFormat.format(Date(log.date)), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(
+                            dateFormat.format(Date(log.date)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
+
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -600,24 +632,14 @@ fun CreateRoutineDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveWorkoutScreen(
-    exercises: List<ActiveExercise>,
-    onUpdate: (Int, String?, String?, Boolean?) -> Unit,
+    exercises: List<ActiveExercise>, // Asegúrate de que apunte a la clase correcta
+    onUpdateSet: (Int, Long, String?, String?, Boolean?) -> Unit, // (ExId, SetId, w, r, done)
+    onAddSet: (Int) -> Unit,
+    onRemoveSet: (Int, Long) -> Unit,
     onFinish: () -> Unit,
     onCancel: () -> Unit
 ) {
     Scaffold(
-        bottomBar = {
-            Button(
-                onClick = onFinish,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text("TERMINAR ENTRENO 🏁", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
-        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Entrenando...", fontWeight = FontWeight.Bold) },
@@ -631,66 +653,167 @@ fun ActiveWorkoutScreen(
     ) { padding ->
         LazyColumn(
             contentPadding = padding,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .imePadding()
         ) {
-            items(exercises) { item ->
+            items(exercises) { exercise ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (item.isCompleted) Color(0xFFDCFCE7) else MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(2.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(4.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        // Encabezado del ejercicio
+                        Text(
+                            text = exercise.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Cabecera de la tabla
+                        // Dentro de ActiveWorkoutScreen -> Card -> Column
+                        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
+                                "Serie",
+                                modifier = Modifier.width(40.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
                             )
-                            Checkbox(
-                                checked = item.isCompleted,
-                                onCheckedChange = { isChecked ->
-                                    onUpdate(item.id, null, null, isChecked)
-                                }
+                            Text(
+                                "Kg",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
+                            Text(
+                                "Reps",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
+                            )
+                            Text(
+                                "Hecho",
+                                modifier = Modifier.width(50.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // <--- Corregido
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(
-                                value = item.weight,
-                                onValueChange = { onUpdate(item.id, it, null, null) },
-                                label = { Text("Kg") },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = item.reps,
-                                onValueChange = { onUpdate(item.id, null, it, null) },
-                                label = { Text("Reps") },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // Lista de series
+                        exercise.sets.forEachIndexed { index, set ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                // Número de serie
+                                Text(
+                                    text = "${index + 1}",
+                                    modifier = Modifier.width(40.dp),
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                // Input Peso
+                                OutlinedTextField(
+                                    value = set.weight,
+                                    onValueChange = { onUpdateSet(exercise.id, set.id, it, null, null) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        focusedContainerColor = if (set.isCompleted) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) else Color.Transparent
+                                    )
+                                )
+
+                                // Input Reps
+                                OutlinedTextField(
+                                    value = set.reps,
+                                    onValueChange = { onUpdateSet(exercise.id, set.id, null, it, null) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color.LightGray,
+                                        focusedContainerColor = if (set.isCompleted) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) else Color.Transparent
+                                    )
+                                )
+
+                                // Checkbox y Botón Borrar
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = set.isCompleted,
+                                        onCheckedChange = { isChecked ->
+                                            onUpdateSet(exercise.id, set.id, null, null, isChecked)
+                                        }
+                                    )
+
+                                    // Botón pequeño para borrar serie
+                                    IconButton(
+                                        onClick = { onRemoveSet(exercise.id, set.id) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Close, // O Icons.Filled.Delete si lo tienes
+                                            contentDescription = "Borrar serie",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Botón AGREGAR SERIE
+                        OutlinedButton(
+                            onClick = { onAddSet(exercise.id) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Agregar Serie")
                         }
                     }
                 }
             }
             item {
-                Spacer(modifier = Modifier.height(80.dp)) // Espacio para el botón flotante
+                Spacer(modifier = Modifier.height(80.dp))
+
+                Button(
+                    onClick = onFinish,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(12.dp) // Un toque estético
+                ) {
+                    Text(
+                        "TERMINAR ENTRENO 🏁",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+
             }
         }
     }
 }
-
-
-
