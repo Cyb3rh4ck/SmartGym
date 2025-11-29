@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.cyb3rh4ck.gymtrackerapp.ui.theme.GymTrackerAppTheme
-import androidx.compose.material3.Typography
 
 
 class MainActivity : ComponentActivity() {
@@ -139,6 +138,12 @@ fun SmartGymScreen(viewModel: MainViewModel) {
                 Toast.makeText(context, "¡Entreno Guardado! 💪", Toast.LENGTH_LONG).show()
             },
             onCancel = { viewModel.cancelActiveWorkout() }
+        )
+    } else if (showCreateRoutineDialog) {
+        // NUEVA PANTALLA COMPLETA
+        CreateRoutineScreen(
+            viewModel = viewModel,
+            onNavigateBack = { showCreateRoutineDialog = false }
         )
     } else {
     Scaffold(

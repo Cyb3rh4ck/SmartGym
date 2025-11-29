@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.cyb3rh4ck.gymtrackerapp.data.Routine
+import com.cyb3rh4ck.gymtrackerapp.ui.Models.RoutineExerciseConfig
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class MainViewModel(context: Context) : ViewModel() {
 
@@ -32,6 +35,12 @@ class MainViewModel(context: Context) : ViewModel() {
     val routines: StateFlow<List<Routine>> = dao.getAllRoutines()
         .stateIn(viewModelScope,
             SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val gson = Gson()
+    // --- ESTADO PARA LA CREACIÓN DE RUTINA ---
+    // Lista temporal de ejercicios que estamos configurando
+    private val _draftRoutineExercises = MutableStateFlow<List<RoutineExerciseConfig>>(emptyList())
+    val draftRoutineExercises: StateFlow<List<RoutineExerciseConfig>> = _draftRoutineExercises.asStateFlow()
 
     private val _activeWorkout = MutableStateFlow<List<ActiveExercise>>(emptyList())
     val activeWorkout: StateFlow<List<ActiveExercise>> = _activeWorkout.asStateFlow()
@@ -94,18 +103,44 @@ class MainViewModel(context: Context) : ViewModel() {
         }
     }
 
-    // INICIAR: Crea ejercicios con 1 serie vacía por defecto
+    // Ahora debe ser capaz de leer el formato JSON nuevo
     fun startRoutine(routine: Routine) {
-        val exercises = routine.exercises.split(",")
-            .filter { it.isNotBlank() }
-            .mapIndexed { index, name ->
+        val exerciseList: List<ActiveExercise> = try {
+            // 1. Intentamos leerlo como el nuevo formato JSON
+            val listType = object : TypeToken<List<RoutineExerciseConfig>>() {}.type
+            val configs: List<RoutineExerciseConfig> = gson.fromJson(routine.exercises, listType)
+
+            // Convertimos la Configuración a Ejercicios Activos
+            configs.mapIndexed { index, config ->
+                // Creamos las series vacías basadas en el "targetSets"
+                val initialSets = List(config.targetSets) {
+                    ActiveSet(
+                        reps = config.targetReps, // Precargamos el objetivo de reps como sugerencia
+                        weight = "" // El peso lo dejamos vacío o lo traemos del historial (ver paso anterior)
+                    )
+                }
+
                 ActiveExercise(
                     id = index,
-                    name = name.trim(),
-                    sets = listOf(ActiveSet()) // Empieza con la Serie 1 vacía
+                    name = config.name,
+                    sets = initialSets
+                    // Aquí podrías pasar también el tiempo de descanso al ActiveExercise si quieres usarlo en el Timer
                 )
             }
-        _activeWorkout.value = exercises
+        } catch (e: Exception) {
+            // 2. FALLBACK: Si falla (es una rutina vieja separada por comas), usamos la lógica antigua
+            routine.exercises.split(",")
+                .filter { it.isNotBlank() }
+                .mapIndexed { index, name ->
+                    ActiveExercise(
+                        id = index,
+                        name = name.trim(),
+                        sets = listOf(ActiveSet())
+                    )
+                }
+        }
+
+        _activeWorkout.value = exerciseList
     }
 
     // AGREGAR SERIE (Con lógica de duplicar datos anteriores)
@@ -196,8 +231,34 @@ class MainViewModel(context: Context) : ViewModel() {
         _activeWorkout.value = emptyList()
     }
 
+    // Agregar un ejercicio configurado al borrador
+    fun addExerciseToDraft(config: RoutineExerciseConfig) {
+        _draftRoutineExercises.value = _draftRoutineExercises.value + config
+    }
 
+    // Eliminar del borrador
+    fun removeExerciseFromDraft(config: RoutineExerciseConfig) {
+        _draftRoutineExercises.value = _draftRoutineExercises.value - config
+    }
 
+    // Limpiar borrador
+    fun clearDraft() {
+        _draftRoutineExercises.value = emptyList()
+    }
+
+    // GUARDAR RUTINA FINAL (Conversión a JSON)
+    fun saveNewRoutine(routineName: String) {
+        viewModelScope.launch {
+            // Convertimos la lista de objetos a un String JSON
+            // Ej: '[{"name":"Squat","targetSets":4...}, ...]'
+            val exercisesJson = gson.toJson(_draftRoutineExercises.value)
+
+            val newRoutine = Routine(name = routineName, exercises = exercisesJson)
+            dao.insertRoutine(newRoutine)
+
+            clearDraft() // Limpiamos para la próxima
+        }
+    }
 }
 
 
