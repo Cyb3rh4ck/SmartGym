@@ -174,7 +174,7 @@ class MainViewModel(context: Context) : ViewModel() {
     }
 
     // ACTUALIZAR UNA SERIE ESPECÍFICA
-    fun updateSet(exerciseId: Int, setId: Long, weight: String?, reps: String?, isDone: Boolean?) {
+    fun updateSet(exerciseId: Int, setId: Long, weight: String?, reps: String?, isDone: Boolean?, rpe: String?) {
         _activeWorkout.value = _activeWorkout.value.map { exercise ->
             if (exercise.id == exerciseId) {
                 val updatedSets = exercise.sets.map { set ->
@@ -182,7 +182,8 @@ class MainViewModel(context: Context) : ViewModel() {
                         set.copy(
                             weight = weight ?: set.weight,
                             reps = reps ?: set.reps,
-                            isCompleted = isDone ?: set.isCompleted
+                            isCompleted = isDone ?: set.isCompleted,
+                            rpe = rpe ?: set.rpe
                         )
                     } else {
                         set
@@ -278,6 +279,7 @@ data class ActiveSet(
     val id: Long = java.util.UUID.randomUUID().mostSignificantBits, // ID único para identificar la serie en la UI
     val weight: String = "",
     val reps: String = "",
+    var rpe: String = "",
     val isCompleted: Boolean = false
 )
 

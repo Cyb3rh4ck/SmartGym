@@ -1,6 +1,6 @@
 package com.cyb3rh4ck.gymtrackerapp.ui
 
-class Models {
+
 
     // Representa la configuración de un ejercicio DENTRO de una rutina
     data class RoutineExerciseConfig(
@@ -11,4 +11,10 @@ class Models {
         val note: String = ""      // Ej: "Cuidar lumbar"
     )
 
-}
+
+    data class CompletedSet(
+        val weight: Float,
+        val reps: Int,
+        val rpe: Int
+    )
+

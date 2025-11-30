@@ -124,8 +124,8 @@ fun SmartGymScreen(viewModel: MainViewModel) {
     if (activeWorkout.isNotEmpty()) {
         ActiveWorkoutScreen(
             exercises = activeWorkout,
-            onUpdateSet = { exId, setId, w, r, done ->
-                viewModel.updateSet(exId, setId, w, r, done)
+            onUpdateSet = { exId, setId, w, r, done, rpe ->
+                viewModel.updateSet(exId, setId, w, r, done, rpe)
             },
             onAddSet = { exId ->
                 viewModel.addSetToExercise(exId)
@@ -638,7 +638,7 @@ fun CreateRoutineDialog(
 @Composable
 fun ActiveWorkoutScreen(
     exercises: List<ActiveExercise>, // Asegúrate de que apunte a la clase correcta
-    onUpdateSet: (Int, Long, String?, String?, Boolean?) -> Unit, // (ExId, SetId, w, r, done)
+    onUpdateSet: (Int, Long, String?, String?, Boolean?, rpe: String?) -> Unit, // (ExId, SetId, w, r, done)
     onAddSet: (Int) -> Unit,
     onRemoveSet: (Int, Long) -> Unit,
     onFinish: () -> Unit,
@@ -731,7 +731,7 @@ fun ActiveWorkoutScreen(
                                 // Input Peso
                                 OutlinedTextField(
                                     value = set.weight,
-                                    onValueChange = { onUpdateSet(exercise.id, set.id, it, null, null) },
+                                    onValueChange = { onUpdateSet(exercise.id, set.id, it, null, null, null) },
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 8.dp),
@@ -746,7 +746,7 @@ fun ActiveWorkoutScreen(
                                 // Input Reps
                                 OutlinedTextField(
                                     value = set.reps,
-                                    onValueChange = { onUpdateSet(exercise.id, set.id, null, it, null) },
+                                    onValueChange = { onUpdateSet(exercise.id, set.id, null, it, null, null) },
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 8.dp),
@@ -758,12 +758,27 @@ fun ActiveWorkoutScreen(
                                     )
                                 )
 
+                                OutlinedTextField(
+                                    value = set.rpe,
+                                    // Actualizamos el set con el nuevo RPE
+                                    onValueChange = { onUpdateSet(exercise.id, set.id, null, null, null, it) }, // Pasamos el rpe
+                                    label = { Text("RPE") }, // Etiqueta
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color.LightGray
+                                    )
+                                )
+
                                 // Checkbox y Botón Borrar
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Checkbox(
                                         checked = set.isCompleted,
                                         onCheckedChange = { isChecked ->
-                                            onUpdateSet(exercise.id, set.id, null, null, isChecked)
+                                            onUpdateSet(exercise.id, set.id, null, null, isChecked, null)
                                         }
                                     )
 
