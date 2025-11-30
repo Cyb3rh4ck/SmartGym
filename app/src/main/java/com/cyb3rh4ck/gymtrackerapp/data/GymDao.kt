@@ -56,7 +56,7 @@ interface GymDao {
 }
 
 // Añade Routine a las entidades de la Database
-@Database(entities = [WorkoutLog::class, Routine::class, CompletedExercise::class], version = 3, exportSchema = false)
+@Database(entities = [WorkoutLog::class, Routine::class,UserProfile::class, CompletedExercise::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase(){
     abstract fun gymDao(): GymDao

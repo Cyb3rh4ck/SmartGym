@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.cyb3rh4ck.gymtrackerapp.data.Routine
-import com.cyb3rh4ck.gymtrackerapp.ui.Models.RoutineExerciseConfig
+import com.cyb3rh4ck.gymtrackerapp.ui.RoutineExerciseConfig
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import com.google.gson.Gson
