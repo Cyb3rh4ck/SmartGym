@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import androidx.room.TypeConverters
 
 @Dao
 interface GymDao {
@@ -46,10 +47,17 @@ interface GymDao {
 
     @Delete
     suspend fun deleteRoutine(routine: Routine)
+    
+    @Insert
+    suspend fun insertCompletedExercise(completedExercise: CompletedExercise)
+
+    @Query("SELECT * FROM completed_exercises ORDER BY date DESC")
+    fun getAllCompletedExercises(): Flow<List<CompletedExercise>>
 }
 
 // Añade Routine a las entidades de la Database
-@Database(entities = [WorkoutLog::class, Routine::class, UserProfile::class], version = 2)
+@Database(entities = [WorkoutLog::class, Routine::class, CompletedExercise::class], version = 3, exportSchema = false)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase(){
     abstract fun gymDao(): GymDao
 

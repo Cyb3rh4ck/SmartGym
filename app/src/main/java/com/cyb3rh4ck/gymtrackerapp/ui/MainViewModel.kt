@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.stateIn
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
+import com.cyb3rh4ck.gymtrackerapp.data.CompletedExercise
+import com.cyb3rh4ck.gymtrackerapp.ui.CompletedSet
+
 class MainViewModel(context: Context) : ViewModel() {
 
     // 1. Dependencias
@@ -200,30 +203,39 @@ class MainViewModel(context: Context) : ViewModel() {
 
     // GUARDAR TODO (Aplanamos la lista para guardar cada serie individualmente)
     fun finishActiveWorkout() {
+        val activeWorkoutList = _activeWorkout.value
+        if (activeWorkoutList.isEmpty()) return
+
         viewModelScope.launch {
-            val timestamp = System.currentTimeMillis()
+            val currentDate = System.currentTimeMillis()
 
-            _activeWorkout.value.forEach { exercise ->
-                exercise.sets.forEach { set ->
-                    // Solo guardamos si tiene datos válidos y está marcada como completada (opcional)
-                    val w = set.weight.toFloatOrNull()
-                    val r = set.reps.toIntOrNull()
-
-                    if (w != null && r != null && w > 0 && r > 0) {
-                        val log = WorkoutLog(
-                            date = timestamp,
-                            exerciseName = exercise.name,
-                            muscleGroup = "Routine",
-                            weightUsed = w,
-                            reps = r,
-                            rpe = 8 // Podríamos añadir un slider de RPE por serie si quisieras
+            activeWorkoutList.forEach { activeExercise ->
+                // 1. Filtramos y transformamos las series completadas
+                val validSets = activeExercise.sets
+                    .filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
+                    .map { set ->
+                        CompletedSet(
+                            weight = set.weight.toFloatOrNull() ?: 0f,
+                            reps = set.reps.toIntOrNull() ?: 0,
+                            rpe = set.rpe.toIntOrNull() ?: 0 // <-- AQUÍ GUARDAMOS EL RPE REAL
                         )
-                        dao.logWorkout(log)
                     }
+
+                // 2. Si hay series válidas, guardamos el ejercicio completo
+                if (validSets.isNotEmpty()) {
+                    val completedExercise = CompletedExercise(
+                        exerciseName = activeExercise.name,
+                        date = currentDate,
+                        sets = validSets
+                    )
+                    
+                    // Guardamos en la nueva tabla
+                    dao.insertCompletedExercise(completedExercise)
                 }
             }
+
+            // Limpiamos el estado
             _activeWorkout.value = emptyList()
-            loadData()
         }
     }
 
